@@ -1,7 +1,7 @@
-const criptomonedasSelector = document.querySelector("#criptomonedas");
-const monedaSelector = document.querySelector("#moneda");
+//
+const criptomonedasSelect = document.querySelector("#criptomonedas");
+const monedaSelect = document.querySelector("#moneda");
 const formulario = document.querySelector("#formulario");
-
 const resultado = document.querySelector("#resultado");
 
 const objBusqueda = {
@@ -9,7 +9,7 @@ const objBusqueda = {
   criptomoneda: "",
 };
 
-//Promise
+// Promises
 const obtenerCriptomonedas = (criptomonedas) =>
   new Promise((resolve) => {
     resolve(criptomonedas);
@@ -19,131 +19,124 @@ document.addEventListener("DOMContentLoaded", () => {
   consultarCriptomonedas();
 
   formulario.addEventListener("submit", submitFormulario);
-
-  criptomonedasSelector.addEventListener("change", leerValor);
-  monedaSelector.addEventListener("change", leerValor);
+  criptomonedasSelect.addEventListener("change", leerValor);
+  monedaSelect.addEventListener("change", leerValor);
 });
 
+// Funcion async que consulta la API para abtener un listado las criptomoedas
+async function consultarCriptomonedas() {
+  const url =
+    "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=10&tsym=USD";
+
+  //Intentamos obtener la respuesta  y lanzar el resultado
+  try {
+    const respuesta = await fetch(url);
+    const resultado = await respuesta.json();
+    const criptomonedas = await obtenerCriptomonedas(resultado.Data);
+    selectCriptomonedas(criptomonedas);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+function selectCriptomonedas(criptomonedas) {
+  criptomonedas.forEach((cripto) => {
+    const { FullName, Name } = cripto.CoinInfo;
+    const option = document.createElement("option");
+    option.value = Name;
+    option.textContent = FullName;
+    // insertar el HTML
+    criptomonedasSelect.appendChild(option);
+  });
+}
+
 function leerValor(e) {
-  //Pasamos el nombre de la criptomoneda
   objBusqueda[e.target.name] = e.target.value;
 }
 
 function submitFormulario(e) {
   e.preventDefault();
 
-  //validamos la informacion
+  // Extraer los valores
   const { moneda, criptomoneda } = objBusqueda;
 
   if (moneda === "" || criptomoneda === "") {
-    mostrarAlerta("Ambos Campos son obligatorios");
+    mostrarAlerta("Ambos campos son obligatorios");
     return;
   }
 
-  //Consultando la api
   consultarAPI();
 }
 
-function consultarCriptomonedas() {
-  const url =
-    "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=10&tsym=USD";
+function mostrarAlerta(mensaje) {
+  const divMensaje = document.createElement("div");
+  divMensaje.classList.add("error");
 
-  fetch(url)
-    .then((respuesta) => respuesta.json())
-    .then((resultado) => obtenerCriptomonedas(resultado.Data))
-    .then((criptomonedas) => selectCriptomonedas(criptomonedas));
+  divMensaje.textContent = mensaje;
+
+  formulario.appendChild(divMensaje);
+  setTimeout(() => {
+    divMensaje.remove();
+  }, 3000);
 }
 
-function selectCriptomonedas(criptomonedas) {
-  criptomonedas.forEach((cripto) => {
-    //Extraemos el nombre de la criptomoneda
-    const { FullName, Name } = cripto.CoinInfo;
-
-    //Creamos las opciones de criptomoneadas y les pasamos el nombre de la criptomoneda
-    const option = document.createElement("option");
-    option.value = Name;
-    option.textContent = FullName;
-    criptomonedasSelector.appendChild(option);
-  });
-}
-
-function mostrarAlerta(msj) {
-  const existeError = document.querySelector(".error");
-
-  if (!existeError) {
-    const divMensaje = document.createElement("div");
-    divMensaje.classList.add("error");
-
-    //Mensaje de error
-    divMensaje.textContent = msj;
-
-    formulario.appendChild(divMensaje);
-
-    const tiempoMsj = 3000;
-    setTimeout(() => {
-      divMensaje.remove();
-    }, tiempoMsj);
-  }
-}
-
-function consultarAPI() {
+//Funcion asincrona que consulta la api
+async function consultarAPI() {
   const { moneda, criptomoneda } = objBusqueda;
 
   const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${criptomoneda}&tsyms=${moneda}`;
 
-  mostrarLoading();
+  mostrarSpinner();
 
-  fetch(url)
-    .then((respuesta) => respuesta.json())
-    .then((cotizacion) => {
-      mostrarCotizacionMonedaHTML(cotizacion.DISPLAY[criptomoneda][moneda]);
-    });
+  const respuesta = await fetch(url);
+  const cotizacion = await respuesta.json();
+  mostrarCotizacionHTML(cotizacion.DISPLAY[criptomoneda][moneda]);
 }
 
-function mostrarCotizacionMonedaHTML(cotizacion) {
+function mostrarCotizacionHTML(cotizacion) {
   limpiarHTML();
-  //Valores de la api
-  const { PRICE, HIGHDAY, LOWDAY, CHANGEPCT24HOUR } = cotizacion;
+
+  console.log(cotizacion);
+  const { PRICE, HIGHDAY, LOWDAY, CHANGEPCT24HOUR, LASTUPDATE } = cotizacion;
 
   const precio = document.createElement("p");
   precio.classList.add("precio");
-  precio.innerHTML = `El precio es <span>${PRICE}</span>`;
+  precio.innerHTML = `El Precio de ${objBusqueda.criptomoneda} es: <span> ${PRICE} </span>`;
 
   const precioAlto = document.createElement("p");
-  precioAlto.classList.add("precio");
-  precioAlto.innerHTML = `Valor mas alto es <span>${HIGHDAY}</span>`;
+  precioAlto.innerHTML = `<p>Precio más alto hoy: <span>${HIGHDAY}</span> </p>`;
 
   const precioBajo = document.createElement("p");
-  precioBajo.classList.add("precio");
-  precioBajo.innerHTML = `Valor mas bajo es <span>${LOWDAY}</span>`;
+  precioBajo.innerHTML = `<p>Precio más bajo de hoy: <span>${LOWDAY}</span> </p>`;
 
   const ultimasHoras = document.createElement("p");
-  ultimasHoras.classList.add("precio");
-  ultimasHoras.innerHTML = `Variacion de las ultimas 24 hrs <span>${CHANGEPCT24HOUR}%</span>`;
+  ultimasHoras.innerHTML = `<p>Variación últimas 24 horas: <span>${CHANGEPCT24HOUR}%</span></p>`;
 
   resultado.appendChild(precio);
   resultado.appendChild(precioAlto);
   resultado.appendChild(precioBajo);
   resultado.appendChild(ultimasHoras);
+
+  formulario.appendChild(resultado);
+}
+
+function mostrarSpinner() {
+  limpiarHTML();
+
+  const spinner = document.createElement("div");
+  spinner.classList.add("spinner");
+
+  spinner.innerHTML = `
+        <div class="bounce1"></div>
+        <div class="bounce2"></div>
+        <div class="bounce3"></div>    
+    `;
+
+  resultado.appendChild(spinner);
 }
 
 function limpiarHTML() {
   while (resultado.firstChild) {
     resultado.removeChild(resultado.firstChild);
   }
-}
-
-function mostrarLoading() {
-  limpiarHTML();
-  const loading = document.createElement("div");
-  loading.classList.add("spinner");
-
-  loading.innerHTML = `
-  <div class = "bounce1"></div>
-  <div class = "bounce2"></div>
-  <div class = "bounce3"></div>
- 
-  `;
-
-  resultado.appendChild(loading);
 }
